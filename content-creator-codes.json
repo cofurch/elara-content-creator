@@ -1,0 +1,14 @@
+{
+  "CONTENT-*": {
+    "active": true,
+    "max_uses": 0,
+    "uses": 0,
+    "note": "Personalisierter Code fuer alle Kundennamen, z.B. CONTENT-ANNA"
+  },
+  "CREATOR2026": {
+    "active": true,
+    "max_uses": 0,
+    "uses": 1,
+    "note": "Testcode unbegrenzt"
+  }
+}
