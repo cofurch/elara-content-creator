@@ -11,6 +11,8 @@ import anthropic
 import os
 import json
 import base64
+import gspread
+from google.oauth2.service_account import Credentials
 from datetime import datetime
 from pathlib import Path
 
@@ -110,53 +112,80 @@ div.stButton > button:hover {{ opacity: 0.85; background: {LILA} !important; col
 """, unsafe_allow_html=True)
 
 
-# ── DATEIPFADE ─────────────────────────────────────────────────────────────────
-CODES_FILE   = Path(__file__).parent / "content-creator-codes.json"
-HEADER_IMG   = Path(__file__).parent / "assets" / "header.jpg"
+# ── DATEIPFADE & KONSTANTEN ────────────────────────────────────────────────────
+CODES_FILE  = Path(__file__).parent / "content-creator-codes.json"
+HEADER_IMG  = Path(__file__).parent / "assets" / "header.jpg"
+SHEET_ID    = "1uLW2zatmbeYXrdRix99P-EliLN8Ffam3FscqJsC09v4"
+SHEET_TAB   = "ContentCreator-Codes"
 
 
-# ── GUTSCHEIN-SYSTEM ───────────────────────────────────────────────────────────
-def load_codes() -> dict:
-    if CODES_FILE.exists():
-        return json.loads(CODES_FILE.read_text(encoding="utf-8"))
-    return {}
+# ── GOOGLE SHEETS HELPER ───────────────────────────────────────────────────────
+def _fix_pem_key(key: str) -> str:
+    key = key.replace("\\n", "\n").replace("\r\n", "\n").replace("\r", "\n").strip()
+    begin = "-----BEGIN PRIVATE KEY-----"
+    end   = "-----END PRIVATE KEY-----"
+    inner = key
+    for marker in [begin, end, "-----BEGIN RSA PRIVATE KEY-----", "-----END RSA PRIVATE KEY-----"]:
+        inner = inner.replace(marker, "")
+    inner = "".join(inner.split())
+    chunks = [inner[i:i+64] for i in range(0, len(inner), 64)]
+    return begin + "\n" + "\n".join(chunks) + "\n" + end + "\n"
 
 
-def save_codes(data: dict):
-    try:
-        CODES_FILE.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
-    except Exception:
-        pass  # Auf Streamlit Cloud schreibgeschützt — kein Problem bei max_uses=0
+def _get_gsheet_client():
+    creds_dict = dict(st.secrets["gcp_service_account"])
+    if "private_key" in creds_dict:
+        creds_dict["private_key"] = _fix_pem_key(creds_dict["private_key"])
+    scopes = [
+        "https://www.googleapis.com/auth/spreadsheets",
+        "https://www.googleapis.com/auth/drive",
+    ]
+    creds = Credentials.from_service_account_info(creds_dict, scopes=scopes)
+    return gspread.authorize(creds)
 
 
-def check_voucher(code: str) -> tuple:
+# ── CODE-PRÜFUNG (Google Sheet) ────────────────────────────────────────────────
+def check_code(code: str) -> tuple:
+    """Prüft Code gegen Google Sheet. Fallback auf JSON falls Sheet nicht erreichbar."""
     code = code.upper().strip()
     if not code:
         return False, ""
-    codes = load_codes()
 
-    lookup = code
-    if code not in codes:
-        parts = code.split("-")
-        if len(parts) >= 2:
-            prefix = parts[0] + "-*"
-            if prefix in codes:
-                lookup = prefix
-
-    if lookup not in codes:
+    # Primär: Google Sheet
+    try:
+        gc     = _get_gsheet_client()
+        wb     = gc.open_by_key(SHEET_ID)
+        sheet  = wb.worksheet(SHEET_TAB)
+        rows   = sheet.get_all_records()
+        for row in rows:
+            row_code = str(row.get("Code", "")).upper().strip()
+            if row_code == code:
+                aktiv = str(row.get("Aktiv", "")).upper().strip()
+                if aktiv in ("TRUE", "JA", "1", "WAHR"):
+                    return True, "Code akzeptiert."
+                else:
+                    return False, "Dieser Code ist nicht mehr aktiv."
         return False, "Dieser Code ist nicht gültig."
+    except Exception:
+        pass
 
-    v = codes[lookup]
-    if not v.get("active", True):
-        return False, "Dieser Code ist nicht mehr aktiv."
-    max_uses = v.get("max_uses", 0)
-    uses     = v.get("uses", 0)
-    if max_uses > 0 and uses >= max_uses:
-        return False, "Dieser Code wurde bereits verwendet."
+    # Fallback: JSON (für lokale Entwicklung)
+    if CODES_FILE.exists():
+        codes  = json.loads(CODES_FILE.read_text(encoding="utf-8"))
+        lookup = code
+        if code not in codes:
+            parts = code.split("-")
+            if len(parts) >= 2:
+                prefix = parts[0] + "-*"
+                if prefix in codes:
+                    lookup = prefix
+        if lookup in codes:
+            v = codes[lookup]
+            if not v.get("active", True):
+                return False, "Dieser Code ist nicht mehr aktiv."
+            return True, "Code akzeptiert."
 
-    codes[lookup]["uses"] = uses + 1
-    save_codes(codes)
-    return True, "Code akzeptiert."
+    return False, "Dieser Code ist nicht gültig."
 
 
 def check_email_access(email: str) -> bool:
@@ -491,7 +520,7 @@ def screen_login():
         code_ok  = False
         code_msg = ""
         if code:
-            code_ok, code_msg = check_voucher(code)
+            code_ok, code_msg = check_code(code)
 
         if not email_ok and not code_ok:
             if code and not code_ok:
