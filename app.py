@@ -290,22 +290,28 @@ REGELN:
 
 
 # ── REEL FUNKTIONEN ────────────────────────────────────────────────────────────
-def generate_hooks(client, thema, nische, zielgruppe, pain_points):
-    r = client.messages.create(
-        model="claude-sonnet-4-6",
-        max_tokens=1200,
-        system=SYSTEM_REEL,
-        messages=[{"role": "user", "content": f"""Erstelle 5 psychologisch triggernde Instagram Reel Hooks.
+def generate_hooks(client, thema, nische, zielgruppe, pain_points, gruppe="A"):
+    if gruppe == "A":
+        user_msg = f"""Erstelle 8 psychologisch triggernde Instagram Reel Hooks — einen pro Typ.
 
 THEMA: {thema}
 NISCHE: {nische}
 ZIELGRUPPE: {zielgruppe}
 PAIN POINTS: {pain_points}
 
-Jeder Hook ist ein anderer Typ — mische beide Gruppen (A und B).
-Mindestens 2 Hooks aus Gruppe B (DAS-KLINGT-FALSCH, DREI-DINGE, ICH-DACHTE, NICHT-GLAUBEN, DU-MACHST-ES-FALSCH).
+Erstelle EINEN Hook für jeden der folgenden 8 Typen aus Gruppe A — in genau dieser Reihenfolge:
+1. INSIDER-VERRAT
+2. SCHOCK-ERGEBNIS
+3. STILLE-KATASTROPHE
+4. WARUM-GEHEIMNIS
+5. KONTRA-INTUITION
+6. EXPERTEN-ZITAT
+7. WENN-DANN-WARNUNG
+8. ZAHLEN-SCHOCK
+
 Jeder Hook ist für den Bildtext im Reel – maximal 2-3 Zeilen, gross gedacht.
 Jeder Hook muss sofort stoppen, triggern, neugierig machen.
+Zeig den Widerspruch oder die Bedrohung → nenn eine Zahl oder ein konkretes Detail → lass die Antwort offen.
 
 ABSOLUT VERBOTEN im Hook:
 - Die Lösung nennen
@@ -315,20 +321,77 @@ Der Hook zeigt nur Problem, Schmerz oder Neugier-Lücke — nie die Auflösung.
 
 Format exakt so:
 
-HOOK 1 | [TYP-NAME]
+HOOK 1 | INSIDER-VERRAT
 [Hook-Text]
 
-HOOK 2 | [TYP-NAME]
+HOOK 2 | SCHOCK-ERGEBNIS
 [Hook-Text]
 
-HOOK 3 | [TYP-NAME]
+HOOK 3 | STILLE-KATASTROPHE
 [Hook-Text]
 
-HOOK 4 | [TYP-NAME]
+HOOK 4 | WARUM-GEHEIMNIS
 [Hook-Text]
 
-HOOK 5 | [TYP-NAME]
-[Hook-Text]"""}]
+HOOK 5 | KONTRA-INTUITION
+[Hook-Text]
+
+HOOK 6 | EXPERTEN-ZITAT
+[Hook-Text]
+
+HOOK 7 | WENN-DANN-WARNUNG
+[Hook-Text]
+
+HOOK 8 | ZAHLEN-SCHOCK
+[Hook-Text]"""
+    else:
+        user_msg = f"""Erstelle 5 psychologisch triggernde Instagram Reel Hooks — einen pro Typ.
+
+THEMA: {thema}
+NISCHE: {nische}
+ZIELGRUPPE: {zielgruppe}
+PAIN POINTS: {pain_points}
+
+Erstelle EINEN Hook für jeden der folgenden 5 Typen aus Gruppe B — in genau dieser Reihenfolge:
+1. DAS-KLINGT-FALSCH
+2. DREI-DINGE
+3. ICH-DACHTE
+4. NICHT-GLAUBEN
+5. DU-MACHST-ES-FALSCH
+
+Wende für jeden Hook das GESETZ DES STARKEN HOOKS an:
+- DIE LÜCKE: Problem, Schmerz, Widerspruch — die Person erkennt sich
+- DER ERGEBNIS-HINT: konkreter Hinweis WAS sie bekommt — nie die volle Lösung, aber immer eine Richtung
+
+PFLICHT-FORMEL — wähle eine pro Hook:
+A) "...ich zeig dir die [Zahl] [Was] — danach [konkretes Ergebnis]."
+B) "...welche [Zahl] [Was] das sind — und wie ich sie in [Zeitraum] aufgelöst hab."
+C) "[konkreter stuck-point mit Zahl] obwohl sie [tägliche Handlung]."
+
+VERBOTEN: vage Enden / Fragen am Ende / abstrakte Verluste (nie "tausende Euro", immer "bis zu 30.000€")
+
+Format exakt so:
+
+HOOK 1 | DAS-KLINGT-FALSCH
+[Hook-Text]
+
+HOOK 2 | DREI-DINGE
+[Hook-Text]
+
+HOOK 3 | ICH-DACHTE
+[Hook-Text]
+
+HOOK 4 | NICHT-GLAUBEN
+[Hook-Text]
+
+HOOK 5 | DU-MACHST-ES-FALSCH
+[Hook-Text]"""
+
+    r = client.messages.create(
+        model="claude-sonnet-4-6",
+        max_tokens=1800,
+        system=SYSTEM_REEL,
+        messages=[{"role": "user", "content": user_msg}]
     )
     return r.content[0].text
 
@@ -465,7 +528,7 @@ defaults = {
     "user_name": "",
     "user_email": "",
     "mode": None,
-    "reel_step": 1, "hooks": [], "hooks_raw": "",
+    "reel_step": 1, "hook_gruppe": "A", "hooks": [], "hooks_raw": "",
     "selected_hook": "", "caption": "",
     "thema": "", "nische": "", "zielgruppe": "", "pain_points": "",
     "codewort": "", "cta_ziel": "", "handle": "CorinneFurch",
@@ -650,14 +713,26 @@ if st.session_state["mode"] == "reel":
                     st.warning("Erst Thema, Nische und Zielgruppe ausfüllen.")
 
         st.markdown("---")
-        if st.button("🪝 5 psychologisch triggernde Hooks generieren"):
+        st.markdown("**Hook-Gruppe**")
+        gruppe = st.radio(
+            "Hook-Gruppe wählen",
+            options=["A", "B"],
+            format_func=lambda x: "Gruppe A — Klassische Lücken-Hooks (8 Typen)" if x == "A" else "Gruppe B — Widerspruch & Versprechen (5 Typen)",
+            index=0 if st.session_state["hook_gruppe"] == "A" else 1,
+            horizontal=True,
+            label_visibility="collapsed"
+        )
+        st.session_state["hook_gruppe"] = gruppe
+
+        anzahl = 8 if gruppe == "A" else 5
+        if st.button(f"🪝 {anzahl} Hooks generieren (Gruppe {gruppe})"):
             if not all([thema, nische, zielgruppe, pain_points]):
                 st.error("Alle Felder sind Pflicht.")
             else:
                 st.session_state.update({"thema": thema, "nische": nische,
                     "zielgruppe": zielgruppe, "pain_points": pain_points, "handle": handle})
-                with st.spinner("Generiere 5 psychologisch triggernde Hooks..."):
-                    raw = generate_hooks(client, thema, nische, zielgruppe, pain_points)
+                with st.spinner(f"Generiere {anzahl} Hooks für Gruppe {gruppe}..."):
+                    raw = generate_hooks(client, thema, nische, zielgruppe, pain_points, gruppe)
                     st.session_state["hooks"]     = parse_hooks(raw)
                     st.session_state["reel_step"] = 2
                     st.rerun()
