@@ -463,6 +463,17 @@ def parse_hooks(text):
     return hooks
 
 
+# ── CTA-VORLAGEN ──────────────────────────────────────────────────────────────
+CTA_DEFAULTS = [
+    "meine kostenlose Checkliste",
+    "mein gratis Workbook",
+    "mein kostenloses PDF",
+    "den Link zum ELARA Werte Decoder",
+    "die Einladung in den Mindset Monday Club",
+    "meinen kostenlosen Mini-Kurs",
+]
+
+
 # ── STORY FUNKTIONEN ───────────────────────────────────────────────────────────
 def generate_story(client, situation, nische, zielgruppe, codewort, cta_ziel, handle):
     r = client.messages.create(
@@ -532,6 +543,7 @@ defaults = {
     "selected_hook": "", "caption": "",
     "thema": "", "nische": "", "zielgruppe": "", "pain_points": "",
     "codewort": "", "cta_ziel": "", "handle": "CorinneFurch",
+    "cta_optionen": CTA_DEFAULTS + ["— Eigene eingeben —"],
     "story_step": 1, "situation": "", "story_raw": "", "story_sections": {},
     "s_nische": "", "s_zielgruppe": "", "s_codewort": "", "s_cta_ziel": "", "s_handle": "CorinneFurch",
 }
@@ -760,8 +772,22 @@ if st.session_state["mode"] == "reel":
             with col1:
                 codewort = st.text_input("Code-Wort", value=st.session_state["codewort"], placeholder="z.B. CLARITY")
             with col2:
-                cta_ziel = st.text_input("Was bekommt die Person?", value=st.session_state["cta_ziel"],
-                    placeholder="z.B. meine kostenlose Checkliste")
+                optionen = st.session_state["cta_optionen"]
+                aktuell = st.session_state.get("cta_ziel", "")
+                try:
+                    default_idx = optionen.index(aktuell) if aktuell in optionen else 0
+                except ValueError:
+                    default_idx = 0
+                cta_auswahl = st.selectbox(
+                    "Was bekommt die Person?",
+                    options=optionen,
+                    index=default_idx
+                )
+                if cta_auswahl == "— Eigene eingeben —":
+                    cta_ziel = st.text_input("Eigene CTA", placeholder="z.B. meine kostenlose Checkliste",
+                        value="" if aktuell not in optionen[:-1] else "")
+                else:
+                    cta_ziel = cta_auswahl
 
             st.markdown("---")
             col_gen, col_back = st.columns([3, 1])
@@ -770,6 +796,9 @@ if st.session_state["mode"] == "reel":
                     if not codewort or not cta_ziel:
                         st.error("Code-Wort und CTA-Ziel sind Pflicht.")
                     else:
+                        # Neue CTA zur Liste hinzufügen, falls noch nicht vorhanden
+                        if cta_ziel not in st.session_state["cta_optionen"]:
+                            st.session_state["cta_optionen"].insert(-1, cta_ziel)
                         st.session_state.update({"selected_hook": hooks[selected]["text"],
                             "codewort": codewort, "cta_ziel": cta_ziel})
                         with st.spinner("Schreibe Caption..."):
