@@ -396,7 +396,12 @@ HOOK 5 | DU-MACHST-ES-FALSCH
     return r.content[0].text
 
 
-def generate_caption(client, hook, thema, nische, zielgruppe, pain_points, codewort, cta_ziel, handle):
+def generate_caption(client, hook, thema, nische, zielgruppe, pain_points, codewort, cta_ziel, handle, cta_full=None):
+    if cta_full:
+        cta_zeile = cta_full
+    else:
+        cta_zeile = f"Schreib '{codewort}' in die Kommentare – ich schicke dir {cta_ziel} direkt ins Postfach."
+
     r = client.messages.create(
         model="claude-sonnet-4-6",
         max_tokens=1500,
@@ -409,7 +414,6 @@ NISCHE: {nische}
 ZIELGRUPPE: {zielgruppe}
 PAIN POINTS: {pain_points}
 CODE-WORT: {codewort}
-CTA-ZIEL: {cta_ziel}
 HANDLE: @{handle}
 
 WICHTIG: Der Hook steht bereits als Bildtext im Video — er wird in der Caption NICHT wiederholt.
@@ -431,7 +435,7 @@ Struktur der Caption — GENAU so formatieren:
 [Follow-Satz, lebendig formuliert, Variation von: "Wenn dir das hilft – folge @{handle}. Ich teile solche Einblicke regelmässig."]
 
 [Leerzeile]
-Schreib '{codewort}' in die Kommentare – ich schicke dir {cta_ziel} direkt ins Postfach.
+{cta_zeile}
 
 WICHTIG:
 - Keine Sterne (*) irgendwo im Text
@@ -439,6 +443,7 @@ WICHTIG:
 - Keine eckigen Klammern im Output
 - Nur die Emoji-Zahlen als Aufzählungszeichen
 - Jeder Abschnitt mit Leerzeile getrennt
+- Den CTA-Satz am Ende EXAKT so übernehmen wie angegeben — keine Umformulierung
 - Direkt kopierbereit"""}]
     )
     return r.content[0].text
@@ -463,15 +468,40 @@ def parse_hooks(text):
     return hooks
 
 
-# ── CTA-VORLAGEN ──────────────────────────────────────────────────────────────
-CTA_DEFAULTS = [
-    "meine kostenlose Checkliste",
-    "mein gratis Workbook",
-    "mein kostenloses PDF",
-    "den Link zum ELARA Werte Decoder",
-    "die Einladung in den Mindset Monday Club",
-    "meinen kostenlosen Mini-Kurs",
+# ── CTA-PRESETS ────────────────────────────────────────────────────────────────
+CTA_PRESETS = [
+    {
+        "label":    "ELARA — Selbstwert: 5 Übungen",
+        "codewort": "ELARA",
+        "text":     "Schreib ELARA in die Kommentare — ich schicke dir die 5 Übungen, die meinen Selbstwert als CEO in unter 30 Minuten täglich komplett verändert haben, direkt ins Postfach.",
+    },
+    {
+        "label":    "ELARA — Selbstwert Decoder Link",
+        "codewort": "ELARA",
+        "text":     "Schreib ELARA in die Kommentare — ich schick dir den Link zum Selbstwert Decoder und du erkennst in 15 Minuten welche 3 Muster dich gerade blockieren und was du konkret verändern kannst.",
+    },
+    {
+        "label":    "ELARA — Werte Decoder: KI Tool",
+        "codewort": "ELARA",
+        "text":     "Schreib ELARA in die Kommentare — ich schicke dir ein KI Tool, das dir in 20 Min hilft, deine Top 3 Lebenswerte herauszufinden, direkt ins Postfach.",
+    },
+    {
+        "label":    "ELARA — Werte Decoder: ohne Coach",
+        "codewort": "ELARA",
+        "text":     "Schreib ELARA in die Kommentare — wenn du deine Top 3 Lebenswerte wissen willst: ich habe ein KI Tool entwickelt, das dir genau dabei hilft, ganz ohne teuren Coach. Deine Werte für mehr Klarheit.",
+    },
+    {
+        "label":    "ELARA Identity Decoder — Neugier",
+        "codewort": "Check",
+        "text":     "Willst du wissen, welches Selbstbild gerade deine Einkommensentscheidungen steuert? Schreib Check – und du weisst es in 3 Minuten.",
+    },
+    {
+        "label":    "ELARA Identity Decoder — Nutzen",
+        "codewort": "Check",
+        "text":     "Dieses KI-Tool zeigt dir in 3 Minuten, welche Version von dir gerade deine Preise, deine Grenzen und dein Wachstum bestimmt. Schreib Check – ich schicke es dir sofort.",
+    },
 ]
+_PRESET_LABELS = [p["label"] for p in CTA_PRESETS]
 
 
 # ── STORY FUNKTIONEN ───────────────────────────────────────────────────────────
@@ -543,13 +573,23 @@ defaults = {
     "selected_hook": "", "caption": "",
     "thema": "", "nische": "", "zielgruppe": "", "pain_points": "",
     "codewort": "", "cta_ziel": "", "handle": "CorinneFurch",
-    "cta_optionen": CTA_DEFAULTS + ["— Eigene eingeben —"],
+    "cta_preset_label": _PRESET_LABELS[0],
+    "cta_optionen_custom": [],
     "story_step": 1, "situation": "", "story_raw": "", "story_sections": {},
     "s_nische": "", "s_zielgruppe": "", "s_codewort": "", "s_cta_ziel": "", "s_handle": "CorinneFurch",
 }
 for k, v in defaults.items():
     if k not in st.session_state:
         st.session_state[k] = v
+
+
+# ── CTA CALLBACK ───────────────────────────────────────────────────────────────
+def _on_cta_change():
+    label = st.session_state.get("cta_selectbox", "")
+    preset = next((p for p in CTA_PRESETS if p["label"] == label), None)
+    if preset and preset.get("codewort"):
+        st.session_state["codewort"] = preset["codewort"]
+    st.session_state["cta_preset_label"] = label
 
 
 # ── HEADER & FOOTER ────────────────────────────────────────────────────────────
@@ -768,45 +808,59 @@ if st.session_state["mode"] == "reel":
             st.markdown('<span class="step-badge">Schritt 3</span> **CTA einrichten**', unsafe_allow_html=True)
             st.markdown("")
 
-            col1, col2 = st.columns(2)
-            with col1:
-                codewort = st.text_input("Code-Wort", value=st.session_state["codewort"], placeholder="z.B. CLARITY")
-            with col2:
-                optionen = st.session_state["cta_optionen"]
-                aktuell = st.session_state.get("cta_ziel", "")
-                try:
-                    default_idx = optionen.index(aktuell) if aktuell in optionen else 0
-                except ValueError:
-                    default_idx = 0
-                cta_auswahl = st.selectbox(
-                    "Was bekommt die Person?",
-                    options=optionen,
-                    index=default_idx
-                )
-                if cta_auswahl == "— Eigene eingeben —":
-                    cta_ziel = st.text_input("Eigene CTA", placeholder="z.B. meine kostenlose Checkliste",
-                        value="" if aktuell not in optionen[:-1] else "")
-                else:
-                    cta_ziel = cta_auswahl
+            # ── Code-Wort ──
+            codewort = st.text_input("Code-Wort", key="codewort",
+                placeholder="z.B. ELARA")
+
+            # ── CTA Dropdown ──
+            alle_labels = _PRESET_LABELS + st.session_state["cta_optionen_custom"] + ["— Eigene eingeben —"]
+            current_label = st.session_state.get("cta_preset_label", _PRESET_LABELS[0])
+            try:
+                cta_idx = alle_labels.index(current_label)
+            except ValueError:
+                cta_idx = 0
+
+            cta_auswahl = st.selectbox(
+                "Was bekommt die Person?",
+                options=alle_labels,
+                index=cta_idx,
+                key="cta_selectbox",
+                on_change=_on_cta_change
+            )
+
+            preset = next((p for p in CTA_PRESETS if p["label"] == cta_auswahl), None)
+            if preset:
+                cta_full_text = preset["text"]
+                cta_ziel      = ""
+                st.caption("CTA-Vorschau:")
+                st.info(preset["text"])
+            elif cta_auswahl == "— Eigene eingeben —":
+                cta_full_text = None
+                cta_ziel = st.text_input("CTA-Text (was die Person bekommt)",
+                    placeholder="z.B. meine kostenlose Checkliste")
+            else:
+                cta_full_text = None
+                cta_ziel = cta_auswahl
 
             st.markdown("---")
             col_gen, col_back = st.columns([3, 1])
             with col_gen:
                 if st.button("✍️ Caption generieren"):
-                    if not codewort or not cta_ziel:
-                        st.error("Code-Wort und CTA-Ziel sind Pflicht.")
+                    if not codewort or (not cta_full_text and not cta_ziel):
+                        st.error("Code-Wort und CTA sind Pflicht.")
                     else:
-                        # Neue CTA zur Liste hinzufügen, falls noch nicht vorhanden
-                        if cta_ziel not in st.session_state["cta_optionen"]:
-                            st.session_state["cta_optionen"].insert(-1, cta_ziel)
+                        if cta_auswahl == "— Eigene eingeben —" and cta_ziel \
+                                and cta_ziel not in st.session_state["cta_optionen_custom"]:
+                            st.session_state["cta_optionen_custom"].append(cta_ziel)
                         st.session_state.update({"selected_hook": hooks[selected]["text"],
-                            "codewort": codewort, "cta_ziel": cta_ziel})
+                            "cta_ziel": cta_ziel or cta_full_text or ""})
                         with st.spinner("Schreibe Caption..."):
                             st.session_state["caption"] = generate_caption(
                                 client, hooks[selected]["text"],
                                 st.session_state["thema"], st.session_state["nische"],
                                 st.session_state["zielgruppe"], st.session_state["pain_points"],
-                                codewort, cta_ziel, st.session_state["handle"])
+                                codewort, cta_ziel, st.session_state["handle"],
+                                cta_full=cta_full_text)
                             st.session_state["reel_step"] = 3
                             st.rerun()
             with col_back:
