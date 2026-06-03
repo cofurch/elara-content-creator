@@ -10,5 +10,13 @@
     "max_uses": 0,
     "uses": 1,
     "note": "Testcode unbegrenzt"
+  },
+  "CEOSHIFT2026": {
+    "active": true,
+    "max_uses": 0,
+    "uses": 0,
+    "gueltig_bis": "03.09.2026",
+    "eingeloest_am": "",
+    "note": "CEO Shift Challenge Teilnehmerinnen — gueltig bis 03.09.2026"
   }
 }

@@ -157,14 +157,39 @@ def check_code(code: str) -> tuple:
         wb     = gc.open_by_key(SHEET_ID)
         sheet  = wb.worksheet(SHEET_TAB)
         rows   = sheet.get_all_records()
-        for row in rows:
+        for idx, row in enumerate(rows):
             row_code = str(row.get("Code", "")).upper().strip()
             if row_code == code:
                 aktiv = str(row.get("Aktiv", "")).upper().strip()
-                if aktiv in ("TRUE", "JA", "1", "WAHR"):
-                    return True, "Code akzeptiert."
-                else:
+                if aktiv not in ("TRUE", "JA", "1", "WAHR"):
                     return False, "Dieser Code ist nicht mehr aktiv."
+
+                # Ablaufdatum prüfen
+                gueltig_bis = str(row.get("Gültig bis", "")).strip()
+                if gueltig_bis:
+                    try:
+                        if "." in gueltig_bis:
+                            expiry = datetime.strptime(gueltig_bis, "%d.%m.%Y")
+                        else:
+                            expiry = datetime.strptime(gueltig_bis, "%Y-%m-%d")
+                        if datetime.now() > expiry:
+                            return False, "Dieser Code ist abgelaufen."
+                    except ValueError:
+                        pass
+
+                # Einlösedatum erfassen (nur beim ersten Einlösen)
+                eingeloest = str(row.get("Eingelöst am", "")).strip()
+                if not eingeloest:
+                    try:
+                        sheet_row = idx + 2  # +2: Header + 0-Index
+                        headers = sheet.row_values(1)
+                        if "Eingelöst am" in headers:
+                            col = headers.index("Eingelöst am") + 1
+                            sheet.update_cell(sheet_row, col, datetime.now().strftime("%d.%m.%Y %H:%M"))
+                    except Exception:
+                        pass
+
+                return True, "Code akzeptiert."
         return False, "Dieser Code ist nicht gültig."
     except Exception:
         pass
@@ -183,6 +208,22 @@ def check_code(code: str) -> tuple:
             v = codes[lookup]
             if not v.get("active", True):
                 return False, "Dieser Code ist nicht mehr aktiv."
+            # Ablaufdatum prüfen
+            gueltig_bis = v.get("gueltig_bis", "")
+            if gueltig_bis:
+                try:
+                    if "." in gueltig_bis:
+                        expiry = datetime.strptime(gueltig_bis, "%d.%m.%Y")
+                    else:
+                        expiry = datetime.strptime(gueltig_bis, "%Y-%m-%d")
+                    if datetime.now() > expiry:
+                        return False, "Dieser Code ist abgelaufen."
+                except ValueError:
+                    pass
+            if not v.get("eingeloest_am"):
+                codes[lookup]["eingeloest_am"] = datetime.now().strftime("%d.%m.%Y %H:%M")
+                import json as _json
+                CODES_FILE.write_text(_json.dumps(codes, ensure_ascii=False, indent=2), encoding="utf-8")
             return True, "Code akzeptiert."
 
     return False, "Dieser Code ist nicht gültig."
