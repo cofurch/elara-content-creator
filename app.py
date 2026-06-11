@@ -226,9 +226,12 @@ def check_code(code: str) -> tuple:
                 except ValueError:
                     pass
             if not v.get("eingeloest_am"):
-                codes[lookup]["eingeloest_am"] = datetime.now().strftime("%d.%m.%Y %H:%M")
-                import json as _json
-                CODES_FILE.write_text(_json.dumps(codes, ensure_ascii=False, indent=2), encoding="utf-8")
+                try:
+                    codes[lookup]["eingeloest_am"] = datetime.now().strftime("%d.%m.%Y %H:%M")
+                    import json as _json
+                    CODES_FILE.write_text(_json.dumps(codes, ensure_ascii=False, indent=2), encoding="utf-8")
+                except Exception:
+                    pass
             return True, "Code akzeptiert."
 
     return False, "Dieser Code ist nicht gültig."
