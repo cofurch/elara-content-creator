@@ -18,5 +18,35 @@
     "gueltig_bis": "05.09.2026",
     "eingeloest_am": "",
     "note": "CEO Shift Challenge Teilnehmerinnen — gueltig bis 03.09.2026"
+  },
+  "TESTJUNIANKE": {
+    "active": true,
+    "max_uses": 0,
+    "uses": 0,
+    "note": "Sobotka Anke — Testkundin Juni 2026"
+  },
+  "TESTJUNISABINE": {
+    "active": true,
+    "max_uses": 0,
+    "uses": 0,
+    "note": "Tönjes Sabine — Testkundin Juni 2026"
+  },
+  "TESTJUNINIC": {
+    "active": true,
+    "max_uses": 0,
+    "uses": 0,
+    "note": "Schaefer Nicola — Testkundin Juni 2026"
+  },
+  "TESTJUNIACHIM": {
+    "active": true,
+    "max_uses": 0,
+    "uses": 0,
+    "note": "Frommeyer Achim — Testkunde Juni 2026"
+  },
+  "TESTJUNITANYA": {
+    "active": true,
+    "max_uses": 0,
+    "uses": 0,
+    "note": "Rex Tanya — Testkundin Juni 2026"
   }
 }
