@@ -133,7 +133,12 @@ def _fix_pem_key(key: str) -> str:
 
 
 def _get_gsheet_client():
-    creds_dict = dict(st.secrets.get("gcp_service_account") or st.secrets["GSHEET_CREDS"])
+    raw = st.secrets.get("gcp_service_account") or st.secrets["GSHEET_CREDS"]
+    if isinstance(raw, str):
+        import json as _json
+        creds_dict = _json.loads(raw)
+    else:
+        creds_dict = dict(raw)
     if "private_key" in creds_dict:
         creds_dict["private_key"] = _fix_pem_key(creds_dict["private_key"])
     scopes = [
