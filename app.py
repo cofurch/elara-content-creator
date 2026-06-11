@@ -458,19 +458,22 @@ CODE-WORT: {codewort}
 HANDLE: @{handle}
 
 WICHTIG: Der Hook steht bereits als Bildtext im Video — er wird in der Caption NICHT wiederholt.
-Die Caption beginnt direkt mit 1️⃣ und treibt die Neugier weiter — aus einem neuen Winkel.
+Die Caption beginnt mit einem provokanten Einleitungssatz — psychologisch triggernd, neugierig machend, ohne zu viel zu verraten. Danach folgt der Hauptteil.
 
 Struktur der Caption — GENAU so formatieren:
 
-1️⃣ [Kontra-intuitive Eröffnung – anderer Einstieg als der Hook, Problem neu framen, Falsch-Annahme benennen]
+[Einleitungssatz — ein einziger Satz, provokant, psychologisch triggernd, aus dem Thema destilliert — macht neugierig, verrät nicht zu viel, kein Emoji]
 
-2️⃣ [Insider-Anekdote oder Experten-Aussage – konkret, mit Quelle]
 
-3️⃣ [Wissenschaft / Psychologie / Studie – Zahlen oder Fachbegriff]
+[Leerzeile]
 
-4️⃣ [Die Lösung / der Trick – konkret und sofort anwendbar]
+1️⃣ [Insider-Anekdote oder Experten-Aussage – konkret, mit Quelle]
 
-5️⃣ [Emotionaler Abschluss – Übertragung auf den Leser, letzter Satz bleibt]
+2️⃣ [Wissenschaft / Psychologie / Studie – Zahlen oder Fachbegriff]
+
+3️⃣ [Die Lösung / der Trick – konkret und sofort anwendbar]
+
+4️⃣ [Emotionaler Abschluss – Übertragung auf den Leser, letzter Satz bleibt]
 
 [Leerzeile]
 [Follow-Satz, lebendig formuliert, Variation von: "Wenn dir das hilft – folge @{handle}. Ich teile solche Einblicke regelmässig."]
